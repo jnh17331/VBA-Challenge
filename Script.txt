@@ -1,0 +1,193 @@
+Sub GetData()
+
+' Gets value of last row as a variable
+lastRow = Cells(Rows.Count, 1).End(xlUp).row
+
+Dim Ws_Count As Integer
+Dim W As Integer
+Dim ws As Worksheet
+Ws_Count = ActiveWorkbook.Worksheets.Count
+
+
+Dim YearOpen As Double
+YearOpen = Cells(2, 3).Value
+
+Dim YearClose As Double
+
+Dim NextRow As Double
+
+Dim Ticker As String
+
+Dim TotalVolume As Double
+
+Dim TotalIncrease As Double
+
+Dim TotalPercetangeIncrease As Double
+
+Dim TotalDecrease As Double
+
+Dim TotalPercetangeDecrease As Double
+
+Dim GreatestVolume As Double
+
+
+Dim Headers As Range
+Set Headers = Range("K1:T1")
+
+Dim CFRange1 As Range
+Set CFRange1 = Range("L2:L" & lastRow)
+
+Dim CFRange2 As Range
+Set CFRange2 = Range("M2:M" & lastRow)
+
+Dim Percent As Range
+Set Percent = Range("M2:M" & lastRow & ", T2:T3")
+
+For W = 1 To Ws_Count
+Set ws = ActiveWorkbook.Worksheets(W)
+
+
+' Gets value of last row as a variable for each ws
+lastRow = Cells(Rows.Count, 1).End(xlUp).row
+
+' Initializing our variables for each ws
+NextRow = 0
+YearOpen = Cells(2, 3).Value
+TotalVolume = 0
+TotalIncrease = 0
+TotalPercetangeIncrease = 0
+TotalDecrease = 0
+TotalPercetangeDecrease = 0
+GreatestVolume = 0
+Ticker = ""
+
+' Creates Headers for the cleaned data
+ws.Range("K1").Value = "Ticker"
+ws.Range("L1").Value = "Yearly Change"
+ws.Range("M1").Value = "Percent Change"
+ws.Range("N1").Value = "Total Stock Volume"
+ws.Range("S1").Value = "Ticker"
+ws.Range("T1").Value = "Value"
+ws.Range("R2").Value = "Greatest Percent Increase"
+ws.Range("R3").Value = "Greatest Percent Decrease"
+ws.Range("R4").Value = "Greatest Total Volume"
+
+
+
+
+    For I = 2 To lastRow
+        
+        ' Checks if the next row is not equal to the last row
+        If ws.Cells(I + 1, 1).Value <> ws.Cells(I, 1).Value Then
+            
+            ' Gets the year close value
+            YearClose = ws.Cells(I, 6).Value
+            
+            ' Sets the ticker symbol in our anaylsis row + column
+            ws.Cells(2 + NextRow, 11).Value = ws.Cells(I, 1).Value
+            
+            ' Sets the Yearly Change Column
+            ws.Cells(2 + NextRow, 12).Value = YearClose - YearOpen
+            
+            'Sets the Percent Change Column and takes care of any 0s
+            If YearOpen <> 0 Then
+                ws.Cells(2 + NextRow, 13).Value = (YearClose - YearOpen) / YearOpen
+            Else
+                ws.Cells(2 + NextRow, 13).Value = 0
+            End If
+            
+            
+            'Sets Total Stock Volume Column
+            ws.Cells(2 + NextRow, 14).Value = TotalVolume + ws.Cells(I, 7).Value
+            
+            ' Goes to next row
+            NextRow = NextRow + 1
+            
+            ' Resets Total Stock Volume for next Ticker
+            TotalVolume = 0
+            
+            YearOpen = ws.Cells(I + 1, 3).Value
+            
+        ElseIf ws.Cells(I + 1, 1).Value = ws.Cells(I, 1).Value Then
+        
+            ' Adds the days volume to the total volume if the two tickers are the same
+            TotalVolume = TotalVolume + ws.Cells(I, 7).Value
+        
+        End If
+    
+    Next I
+
+    For j = 2 To lastRow
+    
+        ' Checks if the yearly change is higher and if it is, then it sets that as the current highest percent increase
+        If ws.Cells(j + 1, 12).Value > TotalIncrease Then
+            TotalIncrease = ws.Cells(j + 1, 12).Value
+            TotalPercetangeIncrease = ws.Cells(j + 1, 13).Value
+            Ticker = ws.Cells(j + 1, 11).Value
+            ws.Cells(2, 19).Value = Ticker
+            ws.Cells(2, 20).Value = TotalPercetangeIncrease
+        End If
+        
+        
+        ' Checks the cleaned data for the lowest percent
+        If ws.Cells(j + 1, 12).Value < TotalDecrease Then
+            TotalDecrease = ws.Cells(j + 1, 12).Value
+            Ticker = ws.Cells(j + 1, 11).Value
+            TotalPercetangeDecrease = ws.Cells(j + 1, 13).Value
+            ws.Cells(3, 19).Value = Ticker
+            ws.Cells(3, 20).Value = TotalPercetangeDecrease
+        End If
+        
+        ' Checks if the greatest volume is greater than the last cell and if it is, then it gets put into the cleaned cells
+        If ws.Cells(j + 1, 14).Value > GreatestVolume Then
+        GreatestVolume = ws.Cells(j + 1, 14).Value
+        Ticker = ws.Cells(j + 1, 11).Value
+        ws.Cells(4, 19).Value = Ticker
+        ws.Cells(4, 20).Value = GreatestVolume
+        End If
+    
+    Next j
+
+    ' Sets conditional formatting to the yearly and percentage change columns
+    CFRange1.FormatConditions.Delete
+    CFRange1.FormatConditions.Add xlCellValue, xlGreater, "0"
+    CFRange1.FormatConditions(1).Interior.Color = RGB(0, 255, 0)
+    CFRange1.FormatConditions.Add xlCellValue, xlLess, "0"
+    CFRange1.FormatConditions(2).Interior.Color = RGB(255, 0, 0)
+
+    CFRange2.FormatConditions.Delete
+    CFRange2.FormatConditions.Add xlCellValue, xlGreater, "0"
+    CFRange2.FormatConditions(1).Interior.Color = RGB(0, 255, 0)
+    CFRange2.FormatConditions.Add xlCellValue, xlLess, "0"
+    CFRange2.FormatConditions(2).Interior.Color = RGB(255, 0, 0)
+    
+    ' Sets Percents
+    Percent.NumberFormat = "0.00%"
+
+    ' Clears any formatting on headers
+    Headers.FormatConditions.Delete
+
+    ' Autofits the entire sheet
+    ws.Columns("A:Z").AutoFit
+
+Next W
+
+End Sub
+
+
+Sub ClearData()
+
+Dim Ws_Count As Integer
+Dim W As Integer
+Dim ws As Worksheet
+
+Ws_Count = ActiveWorkbook.Worksheets.Count
+
+For W = 1 To Ws_Count
+    
+    Set ws = ActiveWorkbook.Worksheets(W)
+    ws.Range("K:T").ClearContents
+
+Next W
+
+End Sub
